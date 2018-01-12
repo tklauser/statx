@@ -5,7 +5,7 @@
 // statx - Report file status using the Linux statx(2) syscall
 //
 // The output format of statx is implemented as close as possible to the output
-// of stat(1).
+// of stat(1) from GNU coreutils.
 
 // +build linux
 
@@ -23,7 +23,9 @@ import (
 )
 
 var (
-	follow = flag.Bool("L", false, "follow symlinks")
+	noAutomount = flag.Bool("A", false, "disable automount")
+	basic       = flag.Bool("b", false, "basic stat(2) compatible stats only")
+	follow      = flag.Bool("L", false, "follow symlinks")
 	// TODO(tk): add flags for further AT_STATX_* flags and STATX_* mask
 )
 
@@ -43,6 +45,12 @@ func main() {
 	flags := unix.AT_SYMLINK_NOFOLLOW
 	mask := unix.STATX_ALL
 
+	if *noAutomount {
+		flags |= unix.AT_NO_AUTOMOUNT
+	}
+	if *basic {
+		mask = unix.STATX_BASIC_STATS
+	}
 	if *follow {
 		flags &^= unix.AT_SYMLINK_NOFOLLOW
 	}
