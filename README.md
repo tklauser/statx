@@ -18,5 +18,7 @@ Usage
 
 ```
 Usage of ./statx:
+  -A	disable automount
   -L	follow symlinks
+  -b	basic stat(2) compatible stats only
 ```
