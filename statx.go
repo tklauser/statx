@@ -63,7 +63,7 @@ func main() {
 			}
 			log.Fatalf("cannot statx '%s': %v", arg, err)
 		}
-		fmt.Printf("  File: '%s'\n", arg)
+		fmt.Printf("  File: %s\n", arg)
 
 		fmt.Print(" ")
 		if statx.Mask&unix.STATX_SIZE != 0 {
