@@ -199,6 +199,10 @@ func main() {
 				{"a", unix.STATX_ATTR_APPEND},     // file is append-only
 				{"d", unix.STATX_ATTR_NODUMP},     // file is not to be dumped
 				{"e", unix.STATX_ATTR_ENCRYPTED},  // file requires key to decrypt in fs
+				{"A", unix.STATX_ATTR_AUTOMOUNT},  // dir: Automount trigger
+				{"m", unix.STATX_ATTR_MOUNT_ROOT}, // root of a mount
+				{"v", unix.STATX_ATTR_VERITY},     // verity protected file
+				{"D", unix.STATX_ATTR_DAX},        // file is DAX
 			}
 			for _, a := range attrs {
 				if statx.Attributes_mask&a.mask == 0 {
