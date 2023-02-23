@@ -7,6 +7,7 @@
 // The output format of statx is implemented as close as possible to the output
 // of stat(1) from GNU coreutils.
 
+//go:build linux
 // +build linux
 
 package main
