@@ -10,7 +10,7 @@ Installation
 ============
 
 ```
-$ go get -u github.com/tklauser/statx
+$ go install github.com/tklauser/statx@latest
 ```
 
 Usage
