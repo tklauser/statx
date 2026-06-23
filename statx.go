@@ -8,7 +8,6 @@
 // of stat(1) from GNU coreutils.
 
 //go:build linux
-// +build linux
 
 package main
 
