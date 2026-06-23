@@ -200,7 +200,7 @@ func printStatx(out io.Writer, arg string, flags int, mask int) error {
 	}
 
 	if statx.Attributes_mask != 0 {
-		fmt.Fprintf(out, " Attrs: %016x (%s)",
+		fmt.Fprintf(out, " Attrs: %016x (%s)\n",
 			statx.Attributes,
 			attributesString(statx.Attributes, statx.Attributes_mask),
 		)
