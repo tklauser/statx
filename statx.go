@@ -98,15 +98,16 @@ func attributesString(attributes uint64, attributesMask uint64) string {
 		attr byte
 		mask uint64
 	}{
-		{'c', unix.STATX_ATTR_COMPRESSED}, // file is compressed by the fs
-		{'i', unix.STATX_ATTR_IMMUTABLE},  // file is marked immutable
-		{'a', unix.STATX_ATTR_APPEND},     // file is append-only
-		{'d', unix.STATX_ATTR_NODUMP},     // file is not to be dumped
-		{'e', unix.STATX_ATTR_ENCRYPTED},  // file requires key to decrypt in fs
-		{'A', unix.STATX_ATTR_AUTOMOUNT},  // dir: Automount trigger
-		{'m', unix.STATX_ATTR_MOUNT_ROOT}, // root of a mount
-		{'v', unix.STATX_ATTR_VERITY},     // verity protected file
-		{'D', unix.STATX_ATTR_DAX},        // file is currenly in DAX state
+		{'c', unix.STATX_ATTR_COMPRESSED},   // file is compressed by the fs
+		{'i', unix.STATX_ATTR_IMMUTABLE},    // file is marked immutable
+		{'a', unix.STATX_ATTR_APPEND},       // file is append-only
+		{'d', unix.STATX_ATTR_NODUMP},       // file is not to be dumped
+		{'e', unix.STATX_ATTR_ENCRYPTED},    // file requires key to decrypt in fs
+		{'A', unix.STATX_ATTR_AUTOMOUNT},    // dir: Automount trigger
+		{'m', unix.STATX_ATTR_MOUNT_ROOT},   // root of a mount
+		{'v', unix.STATX_ATTR_VERITY},       // verity protected file
+		{'D', unix.STATX_ATTR_DAX},          // file is currenlunix.STATX_ATTR_DAXy in DAX state
+		{'x', unix.STATX_ATTR_WRITE_ATOMIC}, // file supports atomic write operations
 	}
 	var sb strings.Builder
 	for _, a := range attrs {
