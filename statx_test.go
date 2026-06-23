@@ -9,6 +9,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -36,6 +37,27 @@ func TestFileTypeString(t *testing.T) {
 			wantChar: '-',
 		},
 		{
+			name:     "FIFO",
+			mode:     uint16(unix.S_IFIFO | 0600),
+			mask:     unix.STATX_TYPE,
+			wantType: "fifo",
+			wantChar: 'p',
+		},
+		{
+			name:     "character device",
+			mode:     uint16(unix.S_IFCHR | 0666),
+			mask:     unix.STATX_TYPE,
+			wantType: "character special file",
+			wantChar: 'c',
+		},
+		{
+			name:     "block device",
+			mode:     uint16(unix.S_IFBLK | 0600),
+			mask:     unix.STATX_TYPE,
+			wantType: "block special file",
+			wantChar: 'b',
+		},
+		{
 			name:     "directory",
 			mode:     uint16(unix.S_IFDIR | 0755),
 			mask:     unix.STATX_TYPE,
@@ -48,6 +70,13 @@ func TestFileTypeString(t *testing.T) {
 			mask:     unix.STATX_TYPE,
 			wantType: "symbolic link",
 			wantChar: 'l',
+		},
+		{
+			name:     "socket",
+			mode:     uint16(unix.S_IFSOCK | 0755),
+			mask:     unix.STATX_TYPE,
+			wantType: "socket",
+			wantChar: 's',
 		},
 		{
 			name:     "type unavailable",
@@ -90,10 +119,34 @@ func TestModeString(t *testing.T) {
 			want: "0644/-rw-r--r--",
 		},
 		{
+			name: "FIFO",
+			mode: uint16(unix.S_IFIFO | 0600),
+			ft:   'p',
+			want: "0600/prw-------",
+		},
+		{
+			name: "character device",
+			mode: uint16(unix.S_IFCHR | 0666),
+			ft:   'c',
+			want: "0666/crw-rw-rw-",
+		},
+		{
+			name: "block device",
+			mode: uint16(unix.S_IFBLK | 0600),
+			ft:   'b',
+			want: "0600/brw-------",
+		},
+		{
 			name: "directory",
 			mode: uint16(unix.S_IFDIR | 0755),
 			ft:   'd',
 			want: "0755/drwxr-xr-x",
+		},
+		{
+			name: "socket",
+			mode: uint16(unix.S_IFSOCK | 0755),
+			ft:   's',
+			want: "0755/srwxr-xr-x",
 		},
 		{
 			name: "no permissions",
@@ -218,6 +271,27 @@ func TestPrintStatxMatchesGNUStat(t *testing.T) {
 			setup: func(t *testing.T) (string, error) {
 				path := filepath.Join(t.TempDir(), "directory")
 				return path, os.Mkdir(path, 0755)
+			},
+		},
+		{
+			name: "FIFO",
+			setup: func(t *testing.T) (string, error) {
+				path := filepath.Join(t.TempDir(), "fifo")
+				return path, unix.Mkfifo(path, 0600)
+			},
+		},
+		{
+			name: "socket",
+			setup: func(t *testing.T) (string, error) {
+				path := filepath.Join(t.TempDir(), "sock")
+				ln, err := net.Listen("unix", path)
+				if err != nil {
+					return "", err
+				}
+				t.Cleanup(func() {
+					ln.Close()
+				})
+				return path, nil
 			},
 		},
 		{
