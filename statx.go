@@ -38,7 +38,7 @@ func fileTypeString(mode uint16, mask uint32) (string, byte) {
 
 	switch mode & unix.S_IFMT {
 	case unix.S_IFIFO:
-		return "FIFO", 'p'
+		return "fifo", 'p'
 	case unix.S_IFCHR:
 		return "character special file", 'c'
 	case unix.S_IFDIR:
