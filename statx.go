@@ -14,6 +14,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/user"
@@ -122,77 +123,84 @@ func attributesString(attributes uint64, attributesMask uint64) string {
 	return sb.String()
 }
 
-func printStatx(arg string, flags int, mask int) error {
+func printStatx(out io.Writer, arg string, flags int, mask int) error {
 	var statx unix.Statx_t
 	if err := unix.Statx(unix.AT_FDCWD, arg, flags, mask, &statx); err != nil {
 		return err
 	}
-	fmt.Printf("  File: %s\n", arg)
 
-	fmt.Print(" ")
+	ftStr, ftChar := fileTypeString(statx.Mode, statx.Mask)
+
+	var extra string
+	if ftChar == 'l' {
+		link, err := os.Readlink(arg)
+		if err == nil {
+			extra = fmt.Sprintf(" -> %s", link)
+		}
+	}
+	fmt.Fprintf(out, "  File: %s%s\n ", arg, extra)
+
 	if statx.Mask&unix.STATX_SIZE != 0 {
-		fmt.Printf(" Size: %-15d", statx.Size)
+		fmt.Fprintf(out, " Size: %-10d", statx.Size)
 	}
 	if statx.Mask&unix.STATX_BLOCKS != 0 {
-		fmt.Printf(" Blocks: %-10d", statx.Blocks)
+		fmt.Fprintf(out, "\tBlocks: %-10d", statx.Blocks)
 	}
-	ftStr, ftChar := fileTypeString(statx.Mode, statx.Mask)
-	fmt.Printf(" IO Block: %-6d %s\n", statx.Blksize, ftStr)
+	fmt.Fprintf(out, " IO Block: %-6d %s\n", statx.Blksize, ftStr)
 
-	dev := unix.Mkdev(statx.Dev_major, statx.Dev_minor)
-	fmt.Printf("Device: %-15s", fmt.Sprintf("%xh/%dd", dev, dev))
+	fmt.Fprintf(out, "Device: %d,%d", statx.Dev_major, statx.Dev_minor)
 	if statx.Mask&unix.STATX_INO != 0 {
-		fmt.Printf(" Inode: %-11d", statx.Ino)
+		fmt.Fprintf(out, "\tInode: %-11d", statx.Ino)
 	}
 	if statx.Mask&unix.STATX_NLINK != 0 {
-		fmt.Printf(" Links: %-5d", statx.Nlink)
+		fmt.Fprintf(out, " Links: %d", statx.Nlink)
 	}
 	if statx.Mask&unix.STATX_TYPE != 0 {
 		switch statx.Mode & unix.S_IFMT {
 		case unix.S_IFBLK:
 			fallthrough
 		case unix.S_IFCHR:
-			fmt.Printf(" Device type: %d,%d", statx.Rdev_major, statx.Rdev_minor)
+			fmt.Fprintf(out, "\tDevice type: %d,%d", statx.Rdev_major, statx.Rdev_minor)
 		}
 	}
-	fmt.Println()
+	fmt.Fprintln(out)
 
 	if statx.Mask&unix.STATX_MODE != 0 {
-		fmt.Printf("Access: (%s)  ", modeString(statx.Mode, ftChar))
+		fmt.Fprintf(out, "Access: (%s)  ", modeString(statx.Mode, ftChar))
 	}
 	if statx.Mask&unix.STATX_UID != 0 {
 		user, err := user.LookupId(fmt.Sprint(statx.Uid))
 		if err == nil {
-			fmt.Printf("Uid: (%5d/%8s)   ", statx.Uid, user.Username)
+			fmt.Fprintf(out, "Uid: (%5d/%8s)   ", statx.Uid, user.Username)
 		} else {
-			fmt.Printf("Uid: %5d   ", statx.Uid)
+			fmt.Fprintf(out, "Uid: %5d   ", statx.Uid)
 		}
 	}
 	if statx.Mask&unix.STATX_GID != 0 {
 		group, err := user.LookupGroupId(fmt.Sprint(statx.Gid))
 		if err == nil {
-			fmt.Printf("Gid: (%5d/%8s)", statx.Gid, group.Name)
+			fmt.Fprintf(out, "Gid: (%5d/%8s)", statx.Gid, group.Name)
 		} else {
-			fmt.Printf("Gid: %5d", statx.Gid)
+			fmt.Fprintf(out, "Gid: %5d", statx.Gid)
 		}
 	}
-	fmt.Println()
+	fmt.Fprintln(out)
 
 	if statx.Mask&unix.STATX_ATIME != 0 {
-		fmt.Println("Access:", formatStatxTimestamp(statx.Atime))
+		fmt.Fprintln(out, "Access:", formatStatxTimestamp(statx.Atime))
 	}
 	if statx.Mask&unix.STATX_MTIME != 0 {
-		fmt.Println("Modify:", formatStatxTimestamp(statx.Mtime))
+		fmt.Fprintln(out, "Modify:", formatStatxTimestamp(statx.Mtime))
 	}
 	if statx.Mask&unix.STATX_CTIME != 0 {
-		fmt.Println("Change:", formatStatxTimestamp(statx.Ctime))
+		fmt.Fprintln(out, "Change:", formatStatxTimestamp(statx.Ctime))
 	}
 	if statx.Mask&unix.STATX_BTIME != 0 {
-		fmt.Println(" Birth:", formatStatxTimestamp(statx.Btime))
+		fmt.Fprintln(out, " Birth:", formatStatxTimestamp(statx.Btime))
 	}
 
 	if statx.Attributes_mask != 0 {
-		fmt.Printf(" Attrs: %016x (%s)",
+		fmt.Fprintf(out, " Attrs: %016x (%s)",
 			statx.Attributes,
 			attributesString(statx.Attributes, statx.Attributes_mask),
 		)
@@ -224,7 +232,7 @@ func main() {
 	}
 
 	for _, arg := range flag.Args() {
-		if err := printStatx(arg, flags, mask); err != nil {
+		if err := printStatx(os.Stdout, arg, flags, mask); err != nil {
 			if err == unix.ENOSYS {
 				log.Fatalf("The statx syscall is not supported. At least Linux kernel 4.11 is needed\n")
 			}
