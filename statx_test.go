@@ -129,3 +129,57 @@ func TestFormatStatxTimestamp(t *testing.T) {
 		t.Fatalf("formatStatxTimestamp(%+v) = %q, want %q", ts, got, want)
 	}
 }
+
+func TestAttributeString(t *testing.T) {
+	allAttributesMask := uint64(
+		unix.STATX_ATTR_COMPRESSED |
+			unix.STATX_ATTR_IMMUTABLE |
+			unix.STATX_ATTR_APPEND |
+			unix.STATX_ATTR_NODUMP |
+			unix.STATX_ATTR_ENCRYPTED |
+			unix.STATX_ATTR_AUTOMOUNT |
+			unix.STATX_ATTR_MOUNT_ROOT |
+			unix.STATX_ATTR_VERITY |
+			unix.STATX_ATTR_DAX)
+
+	tests := []struct {
+		name           string
+		attributes     uint64
+		attributesMask uint64
+		want           string
+	}{
+		{
+			name:           "unsupported",
+			attributes:     0,
+			attributesMask: 0,
+			want:           ".........",
+		},
+		{
+			name:           "supported but unset",
+			attributes:     0,
+			attributesMask: allAttributesMask,
+			want:           "---------",
+		},
+		{
+			name:           "all set",
+			attributes:     allAttributesMask,
+			attributesMask: allAttributesMask,
+			want:           "ciadeAmvD",
+		},
+		{
+			name:           "mixed support and values",
+			attributes:     unix.STATX_ATTR_IMMUTABLE,
+			attributesMask: unix.STATX_ATTR_COMPRESSED | unix.STATX_ATTR_IMMUTABLE | unix.STATX_ATTR_APPEND,
+			want:           "-i-......",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := attributesString(tt.attributes, tt.attributesMask); got != tt.want {
+				t.Fatalf("attributesString(%#x, %#x) = %q, want %q",
+					tt.attributes, tt.attributesMask, got, tt.want)
+			}
+		})
+	}
+}

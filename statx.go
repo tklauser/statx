@@ -17,6 +17,7 @@ import (
 	"log"
 	"os"
 	"os/user"
+	"strings"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -92,6 +93,34 @@ func formatStatxTimestamp(sts unix.StatxTimestamp) string {
 	return time.Unix(sts.Sec, int64(sts.Nsec)).Format("2006-01-02 15:04:05.000000000 -0700")
 }
 
+func attributesString(attributes uint64, attributesMask uint64) string {
+	attrs := []struct {
+		attr byte
+		mask uint64
+	}{
+		{'c', unix.STATX_ATTR_COMPRESSED}, // file is compressed by the fs
+		{'i', unix.STATX_ATTR_IMMUTABLE},  // file is marked immutable
+		{'a', unix.STATX_ATTR_APPEND},     // file is append-only
+		{'d', unix.STATX_ATTR_NODUMP},     // file is not to be dumped
+		{'e', unix.STATX_ATTR_ENCRYPTED},  // file requires key to decrypt in fs
+		{'A', unix.STATX_ATTR_AUTOMOUNT},  // dir: Automount trigger
+		{'m', unix.STATX_ATTR_MOUNT_ROOT}, // root of a mount
+		{'v', unix.STATX_ATTR_VERITY},     // verity protected file
+		{'D', unix.STATX_ATTR_DAX},        // file is currenly in DAX state
+	}
+	var sb strings.Builder
+	for _, a := range attrs {
+		if attributesMask&a.mask == 0 {
+			sb.WriteByte('.') // not supported
+		} else if attributes&a.mask != 0 {
+			sb.WriteByte(a.attr)
+		} else {
+			sb.WriteByte('-') // not set
+		}
+	}
+	return sb.String()
+}
+
 func printStatx(arg string, flags int, mask int) error {
 	var statx unix.Statx_t
 	if err := unix.Statx(unix.AT_FDCWD, arg, flags, mask, &statx); err != nil {
@@ -162,31 +191,10 @@ func printStatx(arg string, flags int, mask int) error {
 	}
 
 	if statx.Attributes_mask != 0 {
-		fmt.Printf(" Attrs: %016x (", statx.Attributes)
-		attrs := []struct {
-			attr string
-			mask uint64
-		}{
-			{"c", unix.STATX_ATTR_COMPRESSED}, // file is compressed by the fs
-			{"i", unix.STATX_ATTR_IMMUTABLE},  // file is marked immutable
-			{"a", unix.STATX_ATTR_APPEND},     // file is append-only
-			{"d", unix.STATX_ATTR_NODUMP},     // file is not to be dumped
-			{"e", unix.STATX_ATTR_ENCRYPTED},  // file requires key to decrypt in fs
-			{"A", unix.STATX_ATTR_AUTOMOUNT},  // dir: Automount trigger
-			{"m", unix.STATX_ATTR_MOUNT_ROOT}, // root of a mount
-			{"v", unix.STATX_ATTR_VERITY},     // verity protected file
-			{"D", unix.STATX_ATTR_DAX},        // file is DAX
-		}
-		for _, a := range attrs {
-			if statx.Attributes_mask&a.mask == 0 {
-				fmt.Print(".") // not supported
-			} else if statx.Attributes&a.mask != 0 {
-				fmt.Print(a.attr)
-			} else {
-				fmt.Print("-") // not set
-			}
-		}
-		fmt.Println(")")
+		fmt.Printf(" Attrs: %016x (%s)",
+			statx.Attributes,
+			attributesString(statx.Attributes, statx.Attributes_mask),
+		)
 	}
 
 	return nil
