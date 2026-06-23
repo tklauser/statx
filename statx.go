@@ -119,7 +119,6 @@ func main() {
 				fallthrough
 			case unix.S_IFCHR:
 				fmt.Printf(" Device type: %d,%d", statx.Rdev_major, statx.Rdev_minor)
-				break
 			}
 		}
 		fmt.Println()
