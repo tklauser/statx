@@ -29,6 +29,31 @@ var (
 	// TODO(tk): add flags for further AT_STATX_* flags and STATX_* mask
 )
 
+func fileTypeString(mode uint16, mask uint32) (string, byte) {
+	if mask&unix.STATX_TYPE == 0 {
+		return "no type", '?'
+	}
+
+	switch mode & unix.S_IFMT {
+	case unix.S_IFIFO:
+		return "FIFO", 'p'
+	case unix.S_IFCHR:
+		return "character special file", 'c'
+	case unix.S_IFDIR:
+		return "directory", 'd'
+	case unix.S_IFBLK:
+		return "block special file", 'b'
+	case unix.S_IFREG:
+		return "regular file", '-'
+	case unix.S_IFLNK:
+		return "symbolic link", 'l'
+	case unix.S_IFSOCK:
+		return "socket", 's'
+	default:
+		return fmt.Sprintf("unknown type (%o)", mode&unix.S_IFMT), '?'
+	}
+}
+
 func formatStatxTimestamp(sts unix.StatxTimestamp) string {
 	return time.Unix(sts.Sec, int64(sts.Nsec)).Format("2006-01-02 15:04:05.000000000 -0700")
 }
@@ -47,38 +72,8 @@ func printStatx(arg string, flags int, mask int) error {
 	if statx.Mask&unix.STATX_BLOCKS != 0 {
 		fmt.Printf(" Blocks: %-10d", statx.Blocks)
 	}
-	fmt.Printf(" IO Block: %-6d", statx.Blksize)
-	ft := '?'
-	if statx.Mask&unix.STATX_TYPE != 0 {
-		switch statx.Mode & unix.S_IFMT {
-		case unix.S_IFIFO:
-			fmt.Print(" FIFO")
-			ft = 'p'
-		case unix.S_IFCHR:
-			fmt.Print(" character special file")
-			ft = 'c'
-		case unix.S_IFDIR:
-			fmt.Print(" directory")
-			ft = 'd'
-		case unix.S_IFBLK:
-			fmt.Print(" block special file")
-			ft = 'b'
-		case unix.S_IFREG:
-			fmt.Print(" regular file")
-			ft = '-'
-		case unix.S_IFLNK:
-			fmt.Print(" symbolic link")
-			ft = 'l'
-		case unix.S_IFSOCK:
-			fmt.Print(" socket")
-			ft = 's'
-		default:
-			fmt.Printf(" unknown type (%o)", statx.Mode&unix.S_IFMT)
-		}
-	} else {
-		fmt.Printf(" no type")
-	}
-	fmt.Println()
+	ftStr, ftChar := fileTypeString(statx.Mode, statx.Mask)
+	fmt.Printf(" IO Block: %-6d %s\n", statx.Blksize, ftStr)
 
 	dev := unix.Mkdev(statx.Dev_major, statx.Dev_minor)
 	fmt.Printf("Device: %-15s", fmt.Sprintf("%xh/%dd", dev, dev))
@@ -129,7 +124,7 @@ func printStatx(arg string, flags int, mask int) error {
 		if statx.Mode&unix.S_IXOTH != 0 {
 			o[2] = 'x'
 		}
-		fmt.Printf("Access: (%04o/%c%s%s%s)  ", statx.Mode&07777, ft, u, g, o)
+		fmt.Printf("Access: (%04o/%c%s%s%s)  ", statx.Mode&07777, ftChar, u, g, o)
 	}
 	if statx.Mask&unix.STATX_UID != 0 {
 		user, err := user.LookupId(fmt.Sprint(statx.Uid))
