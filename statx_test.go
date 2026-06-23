@@ -13,6 +13,62 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+func TestFileTypeString(t *testing.T) {
+	tests := []struct {
+		name     string
+		mode     uint16
+		mask     uint32
+		wantType string
+		wantChar byte
+	}{
+		{
+			name:     "regular file",
+			mode:     uint16(unix.S_IFREG | 0644),
+			mask:     unix.STATX_TYPE,
+			wantType: "regular file",
+			wantChar: '-',
+		},
+		{
+			name:     "directory",
+			mode:     uint16(unix.S_IFDIR | 0755),
+			mask:     unix.STATX_TYPE,
+			wantType: "directory",
+			wantChar: 'd',
+		},
+		{
+			name:     "symbolic link",
+			mode:     uint16(unix.S_IFLNK | 0777),
+			mask:     unix.STATX_TYPE,
+			wantType: "symbolic link",
+			wantChar: 'l',
+		},
+		{
+			name:     "type unavailable",
+			mode:     0,
+			mask:     0,
+			wantType: "no type",
+			wantChar: '?',
+		},
+		{
+			name:     "unknown type",
+			mode:     0,
+			mask:     unix.STATX_TYPE,
+			wantType: "unknown type (0)",
+			wantChar: '?',
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotType, gotChar := fileTypeString(tt.mode, tt.mask)
+			if gotType != tt.wantType || gotChar != tt.wantChar {
+				t.Fatalf("fileTypeString(%#o, %#x) = %q, %q; want %q, %q",
+					tt.mode, tt.mask, gotType, gotChar, tt.wantType, tt.wantChar)
+			}
+		})
+	}
+}
+
 func TestFormatStatxTimestamp(t *testing.T) {
 	oldLocal := time.Local
 	time.Local = time.UTC
