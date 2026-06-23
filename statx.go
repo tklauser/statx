@@ -29,8 +29,8 @@ var (
 	// TODO(tk): add flags for further AT_STATX_* flags and STATX_* mask
 )
 
-func statxTimestampToTime(sts unix.StatxTimestamp) time.Time {
-	return time.Unix(sts.Sec, int64(sts.Nsec))
+func formatStatxTimestamp(sts unix.StatxTimestamp) string {
+	return time.Unix(sts.Sec, int64(sts.Nsec)).Format("2006-01-02 15:04:05.000000000 -0700")
 }
 
 func main() {
@@ -175,16 +175,16 @@ func main() {
 		fmt.Println()
 
 		if statx.Mask&unix.STATX_ATIME != 0 {
-			fmt.Println("Access:", statxTimestampToTime(statx.Atime))
+			fmt.Println("Access:", formatStatxTimestamp(statx.Atime))
 		}
 		if statx.Mask&unix.STATX_MTIME != 0 {
-			fmt.Println("Modify:", statxTimestampToTime(statx.Mtime))
+			fmt.Println("Modify:", formatStatxTimestamp(statx.Mtime))
 		}
 		if statx.Mask&unix.STATX_CTIME != 0 {
-			fmt.Println("Change:", statxTimestampToTime(statx.Ctime))
+			fmt.Println("Change:", formatStatxTimestamp(statx.Ctime))
 		}
 		if statx.Mask&unix.STATX_BTIME != 0 {
-			fmt.Println(" Birth:", statxTimestampToTime(statx.Btime))
+			fmt.Println(" Birth:", formatStatxTimestamp(statx.Btime))
 		}
 
 		if statx.Attributes_mask != 0 {
