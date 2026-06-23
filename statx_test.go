@@ -69,6 +69,48 @@ func TestFileTypeString(t *testing.T) {
 	}
 }
 
+func TestModeString(t *testing.T) {
+	tests := []struct {
+		name string
+		mode uint16
+		ft   byte
+		want string
+	}{
+		{
+			name: "regular file",
+			mode: uint16(unix.S_IFREG | 0644),
+			ft:   '-',
+			want: "0644/-rw-r--r--",
+		},
+		{
+			name: "directory",
+			mode: uint16(unix.S_IFDIR | 0755),
+			ft:   'd',
+			want: "0755/drwxr-xr-x",
+		},
+		{
+			name: "no permissions",
+			mode: 0,
+			ft:   '?',
+			want: "0000/?---------",
+		},
+		{
+			name: "special bits",
+			mode: uint16(04755),
+			ft:   '-',
+			want: "4755/-rwxr-xr-x",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := modeString(tt.mode, tt.ft); got != tt.want {
+				t.Fatalf("modeString(%#o, %q) = %q, want %q", tt.mode, tt.ft, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestFormatStatxTimestamp(t *testing.T) {
 	oldLocal := time.Local
 	time.Local = time.UTC

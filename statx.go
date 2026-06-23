@@ -54,6 +54,40 @@ func fileTypeString(mode uint16, mask uint32) (string, byte) {
 	}
 }
 
+func modeString(mode uint16, ft byte) string {
+	u := []byte{'-', '-', '-'}
+	if mode&unix.S_IRUSR != 0 {
+		u[0] = 'r'
+	}
+	if mode&unix.S_IWUSR != 0 {
+		u[1] = 'w'
+	}
+	if mode&unix.S_IXUSR != 0 {
+		u[2] = 'x'
+	}
+	g := []byte{'-', '-', '-'}
+	if mode&unix.S_IRGRP != 0 {
+		g[0] = 'r'
+	}
+	if mode&unix.S_IWGRP != 0 {
+		g[1] = 'w'
+	}
+	if mode&unix.S_IXGRP != 0 {
+		g[2] = 'x'
+	}
+	o := []byte{'-', '-', '-'}
+	if mode&unix.S_IROTH != 0 {
+		o[0] = 'r'
+	}
+	if mode&unix.S_IWOTH != 0 {
+		o[1] = 'w'
+	}
+	if mode&unix.S_IXOTH != 0 {
+		o[2] = 'x'
+	}
+	return fmt.Sprintf("%04o/%c%s%s%s", mode&07777, ft, u, g, o)
+}
+
 func formatStatxTimestamp(sts unix.StatxTimestamp) string {
 	return time.Unix(sts.Sec, int64(sts.Nsec)).Format("2006-01-02 15:04:05.000000000 -0700")
 }
@@ -94,37 +128,7 @@ func printStatx(arg string, flags int, mask int) error {
 	fmt.Println()
 
 	if statx.Mask&unix.STATX_MODE != 0 {
-		u := []byte{'-', '-', '-'}
-		if statx.Mode&unix.S_IRUSR != 0 {
-			u[0] = 'r'
-		}
-		if statx.Mode&unix.S_IWUSR != 0 {
-			u[1] = 'w'
-		}
-		if statx.Mode&unix.S_IXUSR != 0 {
-			u[2] = 'x'
-		}
-		g := []byte{'-', '-', '-'}
-		if statx.Mode&unix.S_IRGRP != 0 {
-			g[0] = 'r'
-		}
-		if statx.Mode&unix.S_IWGRP != 0 {
-			g[1] = 'w'
-		}
-		if statx.Mode&unix.S_IXGRP != 0 {
-			g[2] = 'x'
-		}
-		o := []byte{'-', '-', '-'}
-		if statx.Mode&unix.S_IROTH != 0 {
-			o[0] = 'r'
-		}
-		if statx.Mode&unix.S_IWOTH != 0 {
-			o[1] = 'w'
-		}
-		if statx.Mode&unix.S_IXOTH != 0 {
-			o[2] = 'x'
-		}
-		fmt.Printf("Access: (%04o/%c%s%s%s)  ", statx.Mode&07777, ftChar, u, g, o)
+		fmt.Printf("Access: (%s)  ", modeString(statx.Mode, ftChar))
 	}
 	if statx.Mask&unix.STATX_UID != 0 {
 		user, err := user.LookupId(fmt.Sprint(statx.Uid))
